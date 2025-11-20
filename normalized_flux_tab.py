@@ -1,4 +1,3 @@
-# normalized_flux_tab.py
 import numpy as np
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel,
@@ -127,7 +126,6 @@ class NormalizedFluxTab(QWidget):
         )
 
         # --- Matplotlib canvas + toolbar -----------------------------------
-        # (only once – avoids weird duplicate symbols on top-left)
         self.figure = Figure(figsize=(5, 4))
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
@@ -225,19 +223,19 @@ class NormalizedFluxTab(QWidget):
         a1_text = self.alpha1_combo.currentText()
         if a1_text == "None":
             alpha1 = 1
-            a1_ws  = None
+            a1_ws = None
         else:
             alpha1 = None
-            a1_ws  = int(a1_text)
+            a1_ws = int(a1_text)
 
         # α2
         a2_text = self.alpha2_combo.currentText()
         if a2_text == "None":
             alpha2 = 1
-            a2_ws  = None
+            a2_ws = None
         else:
             alpha2 = None
-            a2_ws  = int(a2_text)
+            a2_ws = int(a2_text)
 
         return alpha1, alpha2, a1_ws, a2_ws
 
@@ -250,7 +248,7 @@ class NormalizedFluxTab(QWidget):
 
     def update_files(self):
         year = self.epoch_combo.currentText()
-        n_files = ms.file_num[year] + 1      # or ms.file_num[year], depending on your convention
+        n_files = ms.file_num[year] + 1
         self.file_combo.clear()
         self.file_combo.addItems([str(i) for i in range(n_files)])
 
@@ -291,7 +289,6 @@ class NormalizedFluxTab(QWidget):
         lines.append(f"  σ2   = {res['s2_A']:.4f} ± {res['s2_A_err']:.4f} Å")
         lines.append(f"  C    = {res['C']:.5f} ± {res['C_err']:.2g}")
         lines.append("")
-
         lines.append("Derived (Å, m, km/s):")
         lines.append(f"  FWHM1  = {res['FWHM1_A']:.4f} ± {res['FWHM1_A_err']:.4f} Å")
         lines.append(f"  FWHM2  = {res['FWHM2_A']:.4f} ± {res['FWHM2_A_err']:.4f} Å")
@@ -309,25 +306,18 @@ class NormalizedFluxTab(QWidget):
         lines.append(f"V/R     = {res['V_over_R']:.3f} ± {res['V_over_R_err']:.2f}")
         lines.append(f"χ²_red  = {res['chi2_red']:.3f}")
 
-        # overwrite previous output (clean “terminal”)
         text = "\n".join(lines)
         self.fit_output.setPlainText(text)
-        # scroll to top
         self.fit_output.verticalScrollBar().setValue(0)
 
-        # ----------------------------------------------
         # Overplot the fitted double Gaussian on the panel plot (in green)
-        # ----------------------------------------------
         try:
-            # recompute x-range in meters
             WL = ms.WAVE(year, filenum)
             mask = (WL >= 2.161e-6) & (WL <= 2.172e-6)
 
-            # dense grid for smooth fit curve
             xx_m = np.linspace(WL[mask].min(), WL[mask].max(), 1500)
-            xx_A = xx_m * 1e10  # convert to Å (fit domain)
+            xx_A = xx_m * 1e10  # convert to Å
 
-            # recreate the fit model
             def double_gaussian_with_offset(x, A1, mu1, s1, A2, mu2, s2, C):
                 g1 = A1 * np.exp(-(x - mu1) ** 2 / (2 * s1 ** 2))
                 g2 = A2 * np.exp(-(x - mu2) ** 2 / (2 * s2 ** 2))
@@ -340,12 +330,10 @@ class NormalizedFluxTab(QWidget):
                 res["C"]
             )
 
-            # remove previous fit curves to avoid stacking
             for line in list(self.ax.lines):
                 if line.get_label() == "gauss_fit":
                     line.remove()
 
-            # plot the fit in green
             self.ax.plot(
                 xx_m, yy_fit,
                 color="green",
@@ -353,22 +341,40 @@ class NormalizedFluxTab(QWidget):
                 label="gauss_fit"
             )
 
-            # refresh legend compactly
             handles, labels = self.ax.get_legend_handles_labels()
             self.ax.legend(handles, labels, frameon=False)
 
-            # refresh canvas
             self.canvas.draw()
 
         except Exception as e:
             self.fit_output.appendPlainText(f"\nPlot overlay failed: {repr(e)}")
 
     def update_plot(self):
-        year    = self.epoch_combo.currentText()
+        year = self.epoch_combo.currentText()
         filenum = int(self.file_combo.currentText())
-        baseline_index = self.baseline_combo.currentIndex()  # not used yet
+        baseline_index = self.baseline_combo.currentIndex()  # not used in physics
 
         wl = ms.WAVE(year, filenum)
+
+        # --- Pollux-corrected wavelength for absorption spectra -------------
+        # Uses the low-resolution wavelength grid shifted to align the Pollux
+        # absorption with the Brγ feature, as defined in PolluxSpectra.
+        try:
+            wave_pollux = ms.PolluxSpectra(
+                year,
+                filenum,
+                showHelp=False,
+                whichStar="Primary",
+                whichSpectrum=0,
+                fullResSpectra=True,
+                plot=False,
+                listSpectra=False,
+                returnSpectra=True,
+                returnLowResWave=True,
+            )
+        except Exception:
+            # Fallback if Pollux files are missing or fail to load
+            wave_pollux = wl
 
         # --- zoom preservation logic --------------------------------------
         current_params = (year, filenum, baseline_index)
@@ -421,17 +427,12 @@ class NormalizedFluxTab(QWidget):
                 label="Brγ (2.16612 μm)"
             )
 
-        # --- optional FLCcorr + error band (as in your snippet) -----------
+        # --- optional FLCcorr + error band --------------------------------
         if self.chk_flc_corr.isChecked():
-            # Your code:
-            # normFlux    = ms.NormFlux(year, filenum, returnFLC=True)
-            # normFluxErr = ms.NormFlux(year, filenum, returnFLCerr=True)
-            # wave        = ms.WAVE(year, filenum)
             normFlux = ms.NormFlux(year, filenum, returnFLC=True)
             normFluxErr = ms.NormFlux(year, filenum, returnFLCerr=True)
             wave = wl
 
-            # fill_between for the error
             self.ax.fill_between(
                 wave,
                 normFlux - normFluxErr,
@@ -441,7 +442,6 @@ class NormalizedFluxTab(QWidget):
                 label="FLC ± err"
             )
 
-            # overplot the flux itself
             self.ax.plot(
                 wave,
                 normFlux,
@@ -450,9 +450,10 @@ class NormalizedFluxTab(QWidget):
                 label="FLC"
             )
 
-        # --- optional photo-corrected flux (using alpha1/alpha2 from UI) ---
+        # --- alpha parameters from UI (used below) ------------------------
         alpha1_val, alpha2_val, a1_ws, a2_ws = self._get_alpha_params_from_ui()
 
+        # --- optional photo-corrected flux --------------------------------
         if self.chk_photo_corr.isChecked():
             flux_photo = ms.NormFlux(
                 year=year,
@@ -471,7 +472,6 @@ class NormalizedFluxTab(QWidget):
                 returnAbsorbtion2=False
             )
 
-            # build a nice label
             label_str = "Photo-corr ("
             if a1_ws is None:
                 label_str += "α₁=None"
@@ -484,6 +484,7 @@ class NormalizedFluxTab(QWidget):
                 label_str += f"α₂={a2_ws}"
             label_str += ")"
 
+            # Keep photo-corrected flux on the original wavelength grid
             self.ax.plot(
                 wl, flux_photo,
                 color="tab:red",
@@ -497,7 +498,7 @@ class NormalizedFluxTab(QWidget):
             tell = ms.NormFlux(
                 year=year,
                 filenum=filenum,
-                PhotosphericCorr=False,  # tellurics doesn’t need Pollux
+                PhotosphericCorr=False,
                 alpha1=None,
                 alpha2=None,
                 alpha1_whichSpectrum=None,
@@ -517,7 +518,9 @@ class NormalizedFluxTab(QWidget):
                 label="Tellurics"
             )
 
-        # --- optional absorption features ---------------------------------
+        # --- optional absorption features (Pollux-based) -------------------
+        # These are the Pollux absorption spectra; plot them on the
+        # Pollux-corrected wavelength axis `wave_pollux`.
         if self.chk_abs1.isChecked():
             abs1 = ms.NormFlux(
                 year=year,
@@ -536,7 +539,7 @@ class NormalizedFluxTab(QWidget):
                 returnAbsorbtion2=False
             )
             self.ax.plot(
-                wl, abs1,
+                wave_pollux, abs1,
                 color="tab:purple",
                 linestyle="-.",
                 linewidth=1,
@@ -561,14 +564,14 @@ class NormalizedFluxTab(QWidget):
                 returnAbsorbtion2=True
             )
             self.ax.plot(
-                wl, abs2,
+                wave_pollux, abs2,
                 color="tab:orange",
                 linestyle="-.",
                 linewidth=1,
                 label="Absorption 2"
             )
 
-        # --- default x/y limits like in your snippet if first time ----------
+        # --- default x/y limits if first time ------------------------------
         if not preserve_view:
             self.ax.set_xlim(2.16e-6, 2.172e-6)
             self.ax.set_ylim(0.7, 1.4)
@@ -581,6 +584,5 @@ class NormalizedFluxTab(QWidget):
         self.ax.legend(frameon=False)
         self.canvas.draw()
 
-        # remember current selection for next time
         self._last_view_params = current_params
         self._have_plot = True

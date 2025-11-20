@@ -313,7 +313,7 @@ def WAVE(
         allignPollux = 0
 
     # --- proper corretion: lam_corr =lam_data * (1 - vtot/c)
-    vtot = rv_epoch[year[:-4]][filenum] + SystemicVel + radvel_prim + allignPollux
+    vtot = rv_epoch[year[:-4]][filenum] + SystemicVel + radvel_prim #+ allignPollux
     return CORR_WAVE * (1 - vtot/c_km_s)
 
 
@@ -429,13 +429,16 @@ def PolluxSpectra(
     file_cachePollux["Primary.FITS"] = [fits.open(f, memmap=True) for f in files]
     hdulPollux = file_cachePollux["Primary.FITS"][whichSpectrum] # -> whichSpectrum should be a number
 
-    WAVE_POLLUX     = hdulPollux[1].data["wavelength"]*1e-10
+
+    # --- Since pollux is zeroed at the theoretical Brg emission we need to
+    # --- shift it so it allign with the peak of the emission
+    # --- proper corretion: lam_pollux_corr = lam_pollux_data * (1 - vtot/c)
+    allignPollux = zeroBrg[year][filenum]
+    vtot = - allignPollux
+    WAVE_POLLUX     = hdulPollux[1].data["wavelength"]*1e-10 * (1 - vtot/c_km_s)
     WAVE_REF        = WAVE(year, filenum)
     FLUXNORM_POLLUX = hdulPollux[1].data["normalized flux"] # --> high res data
 
-    # --- Here I shift the Pollux dip to the midpoint of the normalized flux
-    WAVE_REF    = WAVE_REF  * (1 + zeroBrg[year][filenum]/c_km_s)
-    WAVE_POLLUX = WAVE_POLLUX  * (1 + zeroBrg[year][filenum]/c_km_s)
 
     # --- Reduce resolution to fit that of the data
     # --- FLUXNORM_POLLUX acts as alpha_i
