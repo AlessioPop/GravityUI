@@ -970,7 +970,7 @@ def VISLINE(
     # --- define errors, we make some simplifications
     F_LC_ERR   = 0
     VCONT_ERR  = 0
-    VTOT_ERR   = 0.02 * VTOT
+    VTOT_ERR   = 0.01 * VTOT
     PHITOT_ERR = np.deg2rad(VISPHITOT(year, filenum, baseline)/VISPHITOT(year, filenum, baseline))
 
     term0 = 1/((F_LC - 1)**2 * VIS_LINE_PA)
@@ -992,20 +992,20 @@ def VISLINE(
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃                Mask for Brgamma interval           ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
 def mask_brg(year, filenum):
 
     # --- extract wavelength
     WL = WAVE(year, filenum)
 
     # --- define interval of bracket gamma emission
-    left_interval  = np.array([2.1656, 2.1656, 2.1655, 2.1657, 2.1657, 2.1657, 2.1656])*1e-6
-    right_interval = np.array([2.1677, 2.1690, 2.1675, 2.1678, 2.1678, 2.1679, 2.1677])*1e-6
+    left_interval  = np.array([2.1650, 2.1650, 2.1650, 2.1650, 2.1650, 2.1650, 2.1646])*1e-6
+    right_interval = np.array([2.1679, 2.1696, 2.1679, 2.1682, 2.1682, 2.1682, 2.1680])*1e-6
 
     # --- define mask
     mask = (WL > left_interval[year_num[year]]) & (WL < right_interval[year_num[year]])
 
     return mask
-
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃              Pure Line Differential Phase          ┃
@@ -1221,7 +1221,7 @@ def PHILINE(
     err_term3 = vline_err / VLINE
     err_term4 = f_lc_err / (F_LC - 1)
 
-    PHI_LINE_ERR = np.abs(err_term0 * np.sqrt(err_term1**2 + err_term2**2 + err_term3 + err_term4))
+    PHI_LINE_ERR = np.abs(err_term0 * np.sqrt(err_term1**2 + err_term2**2 + err_term3**2 + err_term4**2))
 
     # --- plot data
     if plot:

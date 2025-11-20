@@ -23,13 +23,13 @@ class MainWindow(QMainWindow):
 
         # Tabs
         self.vis_tab = VisibilityTab()
-        self.tabs.addTab(self.vis_tab, "Visibility Amplitude")
+        self.tabs.addTab(self.vis_tab, "Visibility")
 
         self.diffphi_tab = DifferentialPhaseTab()
-        self.tabs.addTab(self.diffphi_tab, "Differential Phase")
+        self.tabs.addTab(self.diffphi_tab, "Diff. Phase")
 
         self.normflux_tab = NormalizedFluxTab()
-        self.tabs.addTab(self.normflux_tab, "Normalized Flux")
+        self.tabs.addTab(self.normflux_tab, "Norm. Flux")
 
 
 def main():
