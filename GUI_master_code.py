@@ -285,14 +285,17 @@ preload_year("2023_red")
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃                  Corrected Wavelength              ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-def WAVE(year, filenum, SystemicVel=25.4, primaryRadvel=None):
+def WAVE(
+    year,
+    filenum,
+    SystemicVel=25.4,
+    primaryRadvel=None,
+    zeroBrg=None
+):
 
+    # --- SystemicVel according to Beskrovnaya is 25.4 km/s instead of the 21.7 km/s from Simbad
 
     # --- Choose which file and epoch
-    #d = f"All_Epochs/{year}/"
-    #files = sorted([os.path.join(d, f) for f in os.listdir(d) if f.endswith('.fits')])
-    #current_file = files[filenum]
-    #hdul = fits.open(current_file)
     hdul = file_cache[year][filenum]
 
     # --- extract wavelength
@@ -303,8 +306,13 @@ def WAVE(year, filenum, SystemicVel=25.4, primaryRadvel=None):
     else:
         radvel_prim = primaryRadvel
 
-    # --- SystemicVel according to Beskrovnaya is 25.4 km/s instead of the 21.7 km/s from Simbad
-    return CORR_WAVE * (1 - rv_epoch[year[:-4]][filenum]/c_km_s) * (1 - SystemicVel/c_km_s) * (1 - radvel_prim/c_km_s)
+    # --- vmid used to shift the pollux wavelength so it allign with the FLC peak
+    if zeroBrg is None:
+        zeroBrg = 0
+
+    # --- proper corretion: lam_corr =lam_data * (1 - vtot/c)
+    vtot = rv_epoch[year[:-4]][filenum] + SystemicVel + radvel_prim + zeroBrg
+    return CORR_WAVE * (1 - vtot/c_km_s)
 
 
 
