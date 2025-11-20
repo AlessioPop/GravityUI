@@ -423,6 +423,10 @@ def PolluxSpectra(
     WAVE_REF        = WAVE(year, filenum)
     FLUXNORM_POLLUX = hdulPollux[1].data["normalized flux"] # --> high res data
 
+    # --- Here I shift the Pollux dip to the midpoint of the normalized flux
+    WAVE_REF    = WAVE_REF  * (1 + zeroBrg[year][filenum]/c_km_s)
+    WAVE_POLLUX = WAVE_POLLUX  * (1 + zeroBrg[year][filenum]/c_km_s)
+
     # --- Reduce resolution to fit that of the data
     # --- FLUXNORM_POLLUX acts as alpha_i
     FLUXNORM_POLLUX_lowres = np.interp(WAVE_REF, WAVE_POLLUX, FLUXNORM_POLLUX)
