@@ -290,7 +290,7 @@ def WAVE(
     filenum,
     SystemicVel=25.4,
     primaryRadvel=None,
-    zeroBrg=None
+    allignPollux=False
 ):
 
     # --- SystemicVel according to Beskrovnaya is 25.4 km/s instead of the 21.7 km/s from Simbad
@@ -307,11 +307,13 @@ def WAVE(
         radvel_prim = primaryRadvel
 
     # --- vmid used to shift the pollux wavelength so it allign with the FLC peak
-    if zeroBrg is None:
-        zeroBrg = 0
+    if allignPollux:
+        allignPollux = zeroBrg[year][filenum]
+    else:
+        allignPollux = 0
 
     # --- proper corretion: lam_corr =lam_data * (1 - vtot/c)
-    vtot = rv_epoch[year[:-4]][filenum] + SystemicVel + radvel_prim + zeroBrg
+    vtot = rv_epoch[year[:-4]][filenum] + SystemicVel + radvel_prim + allignPollux
     return CORR_WAVE * (1 - vtot/c_km_s)
 
 
