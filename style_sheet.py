@@ -1,181 +1,274 @@
 # style_sheet.py
 #
 # Central QSS + palette for GravityUI.
-# Minimal, scientific, light theme with card-style panels.
+# Theme: "Classic Professional" - Clean, light, standard UI with high readability.
 
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtCore import Qt
 
+# --- Color Palette (Light/Professional) ---
+C_BG_MAIN       = "#F5F5F5"  # Main window background (Off-White)
+C_BG_PANEL      = "#FFFFFF"  # Panels/Groupboxes (White)
+C_BG_INPUT      = "#FFFFFF"  # Input fields
+C_BG_BUTTON     = "#E0E0E0"  # Button gradient start
+C_BG_HOVER      = "#D5D5D5"  # Hover state
 
-MAIN_QSS = """
-/* -------- General window background -------- */
-QMainWindow {
-    background-color: #f3f5fa;
-}
+# Text
+C_TEXT_PRI      = "#000000"  # Black
+C_TEXT_SEC      = "#555555"  # Dark Grey
+C_TEXT_DIS      = "#A0A0A0"  # Disabled Grey
 
-/* -------- Tab widget / tab bar -------- */
-QTabWidget::pane {
-    border: none;
-    background: transparent;
-}
+# Accents
+C_ACCENT        = "#0078D7"  # Standard Windows Blue
+C_ACCENT_HOVER  = "#005A9E"  # Darker Blue
+C_BORDER        = "#A0A0A0"  # Standard borders
 
-QTabBar::tab {
-    background: #e5e9f2;
-    color: #5c6475;
-    border-radius: 14px;
-    padding: 6px 16px;
-    margin-right: 4px;
-    font-weight: 500;
-}
+MAIN_QSS = f"""
+/* ==========================================================================
+   GLOBAL RESET & MAIN WINDOW
+   ========================================================================== */
+QMainWindow {{
+    background-color: {C_BG_MAIN};
+    color: {C_TEXT_PRI};
+}}
 
-QTabBar::tab:selected {
-    background: #ffffff;
-    color: #111827;
-}
+QWidget {{
+    font-family: "Segoe UI", "Roboto", "Helvetica", sans-serif;
+    font-size: 10pt;
+    color: {C_TEXT_PRI};
+}}
 
-QTabBar::tab:hover:!selected {
-    background: #edf0f7;
-}
+/* ==========================================================================
+   TAB WIDGET
+   ========================================================================== */
+QTabWidget::pane {{
+    border: 1px solid {C_BORDER};
+    background-color: {C_BG_PANEL};
+    border-radius: 3px;
+    top: -1px;
+}}
 
-/* -------- Left side panel "card" -------- */
-/* You will set objectName("SidePanel") on the left column container. */
-QWidget#SidePanel {
-    background-color: #ffffff;
-    border-radius: 18px;
-    padding: 16px;
-}
+QTabBar::tab {{
+    background: {C_BG_BUTTON};
+    color: {C_TEXT_PRI};
+    border: 1px solid {C_BORDER};
+    border-bottom: 1px solid {C_BORDER};
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    padding: 6px 12px;
+    margin-right: 2px;
+}}
 
-/* Optional: a white card for parameter groups, if you set objectName("ParamCard") */
-QGroupBox#ParamCard {
-    background-color: #ffffff;
-    border-radius: 14px;
-    padding: 10px 12px 12px 12px;
-    border: 1px solid #e2e5f0;
-    margin-top: 8px;
-}
+QTabBar::tab:selected {{
+    background: {C_BG_PANEL};
+    border-bottom: 1px solid {C_BG_PANEL}; /* Blend into pane */
+    font-weight: bold;
+}}
 
-/* -------- Group boxes (headings on the left) -------- */
-QGroupBox {
-    border: none;
-    margin-top: 12px;
-}
+QTabBar::tab:hover:!selected {{
+    background: {C_BG_HOVER};
+}}
 
-QGroupBox::title {
+/* ==========================================================================
+   CONTAINERS
+   ========================================================================== */
+QGroupBox {{
+    background-color: {C_BG_PANEL};
+    border: 1px solid {C_BORDER};
+    border-radius: 4px;
+    margin-top: 20px;
+    padding-top: 16px;
+    font-weight: bold;
+}}
+
+QGroupBox::title {{
     subcontrol-origin: margin;
-    left: 0;
-    padding: 0 0 4px 0;
-    font-weight: 600;
-    color: #111827;
-}
+    subcontrol-position: top left;
+    padding: 2px 6px;
+    left: 8px;
+    color: {C_TEXT_PRI};
+}}
 
-/* -------- Labels -------- */
-QLabel {
-    color: #111827;
-}
+/* ==========================================================================
+   INPUTS (Standard Look)
+   ========================================================================== */
+QComboBox, QSpinBox, QDoubleSpinBox {{
+    background-color: {C_BG_INPUT};
+    border: 1px solid {C_BORDER};
+    border-radius: 3px;
+    padding: 4px 8px;
+    color: {C_TEXT_PRI};
+    min-height: 20px;
+}}
 
-/* Subtitle / helper text (if you want to use objectName) */
-QLabel#MutedLabel {
-    color: #8a92a6;
-    font-size: 9pt;
-}
+QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover {{
+    border: 1px solid {C_ACCENT};
+}}
 
-/* -------- Buttons -------- */
-QPushButton {
-    background-color: #f3f4ff;
-    color: #111827;
-    border-radius: 12px;
-    border: 1px solid #d5d9e6;
-    padding: 6px 14px;
-}
+/* We let Qt draw the default arrow, just adding padding so it fits */
+QComboBox::drop-down {{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left-width: 1px;
+    border-left-color: {C_BORDER};
+    border-left-style: solid;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background: {C_BG_BUTTON};
+}}
 
-QPushButton:hover {
-    background-color: #e9ecff;
-}
+QComboBox::down-arrow {{
+    image: none;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid black; /* Simple black triangle */
+    margin-top: 2px;
+    margin-right: 2px;
+}}
 
-QPushButton:pressed {
-    background-color: #d7dcff;
-}
+/* Spinbox Buttons */
+QSpinBox::up-button, QDoubleSpinBox::up-button {{
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 18px;
+    background: {C_BG_BUTTON};
+    border-left: 1px solid {C_BORDER};
+    border-bottom: 1px solid {C_BORDER};
+}}
 
-QPushButton:disabled {
-    background-color: #eef0f6;
-    color: #b7bcc9;
-    border-color: #e0e3ed;
-}
+QSpinBox::down-button, QDoubleSpinBox::down-button {{
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 18px;
+    background: {C_BG_BUTTON};
+    border-left: 1px solid {C_BORDER};
+    border-top: 0px solid {C_BORDER};
+}}
 
-/* -------- Combo boxes -------- */
-QComboBox {
-    background-color: #ffffff;
-    border-radius: 10px;
-    border: 1px solid #d5d9e6;
-    padding: 4px 10px;
-}
+/* Simple black arrows for spinbox */
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid black;
+}}
 
-QComboBox::drop-down {
-    border: none;
-    width: 20px;
-}
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid black;
+}}
 
-QComboBox::down-arrow {
-    image: none;  /* use native arrow */
-}
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+QPushButton {{
+    background-color: {C_BG_BUTTON};
+    color: {C_TEXT_PRI};
+    border: 1px solid {C_BORDER};
+    border-radius: 3px;
+    padding: 6px 16px;
+}}
 
-/* -------- Checkboxes -------- */
-QCheckBox {
+QPushButton:hover {{
+    background-color: {C_BG_HOVER};
+    border: 1px solid {C_ACCENT};
+}}
+
+QPushButton:pressed {{
+    background-color: {C_ACCENT};
+    color: white;
+}}
+
+/* ==========================================================================
+   CHECKBOX
+   ========================================================================== */
+QCheckBox {{
     spacing: 6px;
-    color: #111827;
-}
+}}
 
-QCheckBox::indicator {
+QCheckBox::indicator {{
     width: 14px;
     height: 14px;
-    border-radius: 4px;
-    border: 1px solid #c6cad8;
-    background: #ffffff;
-}
+    border: 1px solid {C_BORDER};
+    background: {C_BG_INPUT};
+    border-radius: 2px;
+}}
 
-QCheckBox::indicator:hover {
-    border-color: #ffb468;
-}
+QCheckBox::indicator:hover {{
+    border-color: {C_ACCENT};
+}}
 
-QCheckBox::indicator:checked {
-    background-color: #ff9b42;
-    border-color: #ff9b42;
-}
+QCheckBox::indicator:checked {{
+    background-color: {C_ACCENT};
+    border-color: {C_ACCENT};
+    image: none; /* Using solid color for simplicity */
+}}
 
-/* -------- Scroll areas (if any) -------- */
-QScrollArea {
+/* ==========================================================================
+   SLIDERS
+   ========================================================================== */
+QSlider::groove:horizontal {{
+    border: 1px solid {C_BORDER};
+    height: 6px;
+    background: {C_BG_BUTTON};
+    margin: 2px 0;
+    border-radius: 3px;
+}}
+
+QSlider::handle:horizontal {{
+    background: {C_ACCENT};
+    border: 1px solid {C_ACCENT};
+    width: 12px;
+    height: 12px;
+    margin: -4px 0;
+    border-radius: 6px;
+}}
+
+QSlider::handle:horizontal:hover {{
+    background: {C_ACCENT_HOVER};
+}}
+
+/* ==========================================================================
+   MISC
+   ========================================================================== */
+QScrollArea {{
     border: none;
     background: transparent;
-}
+}}
 
-/* -------- Matplotlib toolbar -------- */
-QToolBar {
-    background-color: transparent;
-    border: none;
-}
+QLabel {{
+    color: {C_TEXT_PRI};
+}}
 
-/* Canvas is a QWidget; give it a clean white card look if desired. */
-QWidget#PlotCanvas {
-    background-color: #ffffff;
-    border-radius: 18px;
-}
+/* Matplotlib Canvas Frame */
+QWidget > FigureCanvasQTAgg {{
+    border: 1px solid {C_BORDER};
+    background-color: {C_BG_PANEL};
+}}
 """
 
-
 def apply_style(app):
-    """Apply Fusion style, a light palette, and the QSS."""
+    """Apply the Classic Professional (Light) theme."""
     app.setStyle("Fusion")
 
     palette = QPalette()
-    palette.setColor(QPalette.Window, QColor("#f3f5fa"))
-    palette.setColor(QPalette.Base, QColor("#ffffff"))
-    palette.setColor(QPalette.AlternateBase, QColor("#f3f5fa"))
-    palette.setColor(QPalette.Text, QColor("#111827"))
-    palette.setColor(QPalette.Button, QColor("#f3f4ff"))
-    palette.setColor(QPalette.ButtonText, QColor("#111827"))
-    palette.setColor(QPalette.Highlight, QColor("#ff9b42"))
-    palette.setColor(QPalette.HighlightedText, QColor("#ffffff"))
-    palette.setColor(QPalette.Link, QColor("#ff9b42"))
+    palette.setColor(QPalette.Window,          QColor(C_BG_MAIN))
+    palette.setColor(QPalette.WindowText,      QColor(C_TEXT_PRI))
+    palette.setColor(QPalette.Base,            QColor(C_BG_INPUT))
+    palette.setColor(QPalette.AlternateBase,   QColor(C_BG_PANEL))
+    palette.setColor(QPalette.Text,            QColor(C_TEXT_PRI))
+    palette.setColor(QPalette.Button,          QColor(C_BG_BUTTON))
+    palette.setColor(QPalette.ButtonText,      QColor(C_TEXT_PRI))
+    palette.setColor(QPalette.Highlight,       QColor(C_ACCENT))
+    palette.setColor(QPalette.HighlightedText, QColor("#FFFFFF"))
+
+    # Disabled colors
+    palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(C_TEXT_DIS))
+    palette.setColor(QPalette.Disabled, QPalette.Text,       QColor(C_TEXT_DIS))
+    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(C_TEXT_DIS))
 
     app.setPalette(palette)
     app.setStyleSheet(MAIN_QSS)
