@@ -208,21 +208,48 @@ plt.rcParams.update({
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃              Baseline name function                ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+baseline_cache = {}  # (year, filenum) -> np.ndarray of labels
+
+def _compute_baseline_labels(year, filenum):
+    hdul = file_cache[year][filenum]
+    arrays = {
+        h.header['ARRNAME']: h.data
+        for h in hdul
+        if h.header.get('EXTNAME') == 'OI_ARRAY'
+    }
+
+    all_baselines = []
+
+    for h in hdul:
+        if h.header.get('EXTNAME') not in ('OI_VIS', 'OI_VIS2'):
+            continue
+
+        arrname   = h.header['ARRNAME']
+        arr       = arrays[arrname]
+        sta_names = arr['STA_NAME']
+        sta_ids   = arr['STA_INDEX']
+        sta_pairs = h.data['STA_INDEX']
+
+        id_to_name = dict(zip(sta_ids, sta_names))
+        bl = np.array([f"{id_to_name[i]}-{id_to_name[j]}" for (i, j) in sta_pairs])
+        all_baselines.append(bl)
+
+    unique_baselines = np.unique(np.concatenate(all_baselines))
+    return unique_baselines[::-1]
+
+
 def baseline_name(year, baseline):
-    if year == "2018_red":
-        return ['J3-J2', 'J3-G1', 'J3-A0', 'J2-G1', 'J2-A0', 'G1-A0'][baseline]
-    elif year == "2019_red":
-        return ['J3-D0', 'J3-G2', 'J3-K0', 'D0-G2', 'D0-K0', 'G2-K0'][baseline]
-    elif year == "2020_red":
-        return ['J3-D0', 'J3-G2', 'J3-K0', 'D0-G2', 'D0-K0', 'G2-K0'][baseline]
-    elif year == "2021_red":
-        return ['J3-J2', 'J3-G1', 'J3-A0', 'J2-G1', 'J2-A0', 'G1-A0'][baseline]
-    elif year == "2022a_red":
-        return['J3-D0', 'J3-G2', 'J3-K0', 'D0-G2', 'D0-K0', 'G2-K0'][baseline]
-    elif year == "2022b_red":
-        return ['J3-J2', 'J3-G1', 'J3-A0', 'J2-G1', 'J2-A0', 'G1-A0'][baseline]
-    elif year == "2023_red":
-        return ["K0-J2", "K0-G1", "K0-A0", "J2-G1", "J2-A0", "G1-A0"][baseline]
+
+    # baseline_name(year, filenum, baseline) is also possible,
+    # but since the first file of each epoch has the same
+    # configuration as all other files we can simplify with filenum = 0
+    filenum = 0
+    key = (year, filenum)
+    if key not in baseline_cache:
+        baseline_cache[key] = _compute_baseline_labels(year, filenum)
+    labels = baseline_cache[key]
+    return labels[baseline]
 
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -1025,7 +1052,7 @@ def PHILINE(
     alpha2=None,
     beta1=None,
     beta2=None,
-    returnError=False
+    returnError=False,
 ):
 
     # --- make sure that baseline is ignored if pltAllBaselines is True
@@ -1091,11 +1118,9 @@ def PHILINE(
     for baseline in baseline2plot:
 
         if wave is not None:
-            WL = wave
-            LAM = WL
+            LAM = wave
         else:
-            WL = WAVE(year, filenum)
-            LAM = WL
+            LAM = WAVE(year, filenum)
 
     # --- Check if user want to perform Photospheric correction
     # --- check how to apply alphas
@@ -1114,6 +1139,7 @@ def PHILINE(
                         whichStar="Secondary",
                         whichSpectrum=alpha2_whichSpectrum,
                         fullResSpectra=False,
+                        returnSpectra=True,
                         showHelp=False
                         )
 
@@ -1125,6 +1151,7 @@ def PHILINE(
                         whichStar="Primary",
                         whichSpectrum=alpha1_whichSpectrum,
                         fullResSpectra=False,
+                        returnSpectra=True,
                         showHelp=False
                         )
 
@@ -1136,6 +1163,7 @@ def PHILINE(
                         whichStar="Primary",
                         whichSpectrum=alpha1_whichSpectrum,
                         fullResSpectra=False,
+                        returnSpectra=True,
                         showHelp=False
                         )
 
@@ -1145,6 +1173,7 @@ def PHILINE(
                         whichStar="Secondary",
                         whichSpectrum=alpha2_whichSpectrum,
                         fullResSpectra=False,
+                        returnSpectra=True,
                         showHelp=False
                         )
 
@@ -1256,6 +1285,7 @@ def PHILINE(
             return PHI_LINE_ERR
         else:
             return PHI_LINE
+
 
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -2126,7 +2156,8 @@ def PHILINE_CORR(
     beta1=None,
     beta2=None,
     plot=None,
-    showHelp=False
+    showHelp=False,
+    wave=None
 ):
 
     # --- Show help
@@ -2181,7 +2212,8 @@ def PHILINE_CORR(
         PhotosphericCorr=PhotosphericCorr,
         alpha1_whichSpectrum=alpha1_whichSpectrum,
         alpha2_whichSpectrum=alpha2_whichSpectrum,
-        showHelp=False
+        showHelp=False,
+        wave=wave
     )
 
     # --- default k value settings
@@ -2214,11 +2246,11 @@ def PHILINE_CORR(
         return np.full_like(Phi_line, np.nan)
     else:
         return (-1)**(int(k_values[baseline])) * Phi_line  + np.pi * k_values[baseline]
+####
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃               pure line photo shift                ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
 def pureLinePhotoShift(
     year=None,
     filenum=None,
@@ -2231,23 +2263,80 @@ def pureLinePhotoShift(
     beta1=None,
     beta2=None,
     plot=None,
+    plotPC=False,
     showHelp=False,
-    returnProjectedP=False
+    returnProjectedP=False,
+    doFit=False,
+    returnPC=False,
+    IncludePhi_theo=False,
+    returnProjectedPtheo=False,
+    return_wave=False,
+    wave=None
 ):
+
+
+    # --- Show help
+    if showHelp:
+
+        tbl = Table.grid(padding=(0, 2))
+        tbl.add_column("Description", justify="right", style="bright_black")
+        tbl.add_column("Usage", style=C_PARAM)
+
+        tbl.add_row("Apply Photospheric correction...........", f"[{C_PARAM}]PhotosphericCorr[/]=[{C_DEF}]True[/]")
+        tbl.add_row("choose which spectrum alpha1 uses.......", f"[{C_PARAM}]alpha1_whichSpectrum[/]=[{C_DEF}]value[/]")
+        tbl.add_row("choose which spectrum alpha2 uses.......", f"[{C_PARAM}]alpha2_whichSpectrum[/]=[{C_DEF}]True[/]")
+
+        tbl.add_row("choose beta1 explicitely or set it to 0.", f"[{C_PARAM}]beta1[/]=[{C_DEF}]value[/]")
+        tbl.add_row("choose beta2 explicitely or set it to 0.", f"[{C_PARAM}]beta2[/]=[{C_DEF}]value[/]")
+
+        tbl.add_row("choose wave number (wavelength).........", f"[{C_PARAM}]wave_number[/]=[{C_DEF}]value[/]")
+        tbl.add_row("return wavelengths used.................", f"[{C_PARAM}]return_wave[/]=[{C_DEF}]True[/]")
+        tbl.add_row("select k_values manually................", f"[{C_PARAM}]k_values[/]=[{C_DEF}]np.array(⟦k1, ..., k6⟧)[/]")
+        tbl.add_row("plot....................................", f"[{C_PARAM}]plot[/]=[{C_DEF}]True[/]")
+
+        panel = Panel(
+            tbl,
+            title="[bold #ffae42]help[/]",
+            border_style=C_FRAME,
+            box=box.ROUNDED,
+            padding=(1, 2)
+        )
+
+        console.print(panel)
+
+    if wave_number is None:
+        return console.print("Select wave_number=value")
+
 
     # --- store for each baseline
     store_projectedP     = []
     store_projectedP_err = []
+    store_projectedPtheo = []
+
     # --- some variables
     mask          = mask_brg(year, filenum)
-    Lam           = WAVE(year, filenum)[mask][wave_number] # --------- masked wavelength
+
+    # --- In case I want to use a custom wavelength
+    if wave is None:
+        Lam       = WAVE(year, filenum)[mask][wave_number] # --------- masked wavelength
+        lam2vel   = c_km_s * (WAVE(year, filenum)[mask] - bg)/bg
+    else:
+        Lam       = wave[mask][wave_number]
+        lam2vel   = c_km_s * (wave[mask] - bg)/bg
+
     UCOORD        = Extract(year, filenum, dataType="UCOORD") # ------ U coordinate
     VCOORD        = Extract(year, filenum, dataType="VCOORD") # ------ V coordinate
     PA            = np.arctan2(UCOORD, VCOORD) # --------------------- Position angle in radian
+
+    # --- I need this to know what color to give the colorbar
+    # --- it returns it in km/s automatically
+    if return_wave:
+        return lam2vel
+
     for baseline in range(6):
 
         # --- declairing variables
-        philine_corr     = PHILINE_CORR( # ----------------------------- corrected pure line differential phase
+        philine_corr     = PHILINE_CORR( # --------------------------- corrected pure line differential phase
                             year=year,
                             filenum=filenum,
                             baseline=baseline,
@@ -2258,8 +2347,9 @@ def pureLinePhotoShift(
                             beta1=beta1,
                             beta2=beta2,
                             plot=None,
-                            showHelp=False
-                            )
+                            showHelp=False,
+                            wave=wave
+                        )
 
         philine_corr_err = PHILINE( # ---------------------------------- pure line differential phase error
                             year=year,
@@ -2267,52 +2357,258 @@ def pureLinePhotoShift(
                             baseline=baseline,
                             PhotosphericCorr=False,
                             returnError=True,
-                            showHelp=False
-                            )
-
+                            showHelp=False,
+                            wave=wave
+                        )
 
         B_i              = np.sqrt(UCOORD**2 + VCOORD**2)[baseline] # --- Baseline length
 
-
         # --- Projected B dot P = p_i * cos(PA - phi) in [mas]
         projectedP     = - philine_corr[mask][wave_number] / (2*np.pi) * Lam/B_i * rad2mas
-        projectedP_err = - philine_corr_err[mask][wave_number] / (2*np.pi) * Lam/B_i * rad2mas
+        projectedP_err =   np.abs(philine_corr_err[mask][wave_number] / (2*np.pi) * Lam/B_i * rad2mas)
         store_projectedP.append(projectedP)
         store_projectedP_err.append(projectedP_err)
+
+        # --- for the theoretical p_proj
+        projectedPtheo = - PHI_THEO(
+                            year,
+                            filenum,
+                            baseline,
+                            unit="rad",
+                        )[wave_number] / (2*np.pi) * Lam/B_i * rad2mas
+
+        store_projectedPtheo.append(projectedPtheo)
 
     # --- transform into array since its a pain in the ass
     store_projectedP     = np.array(store_projectedP)
     store_projectedP_err = np.abs(np.array(store_projectedP_err))
+    store_projectedPtheo = np.array(store_projectedPtheo)
 
     # return the projected photo shift
     if returnProjectedP:
         return store_projectedP
 
+    if returnProjectedPtheo:
+        return store_projectedPtheo
 
-     # --- fit cosine angle and amplitude
+    # --- fit cosine angle and amplitude
+    # --- define function that will be fitted
+    def cosine(x, p, phi):
+        return p * np.cos(x - phi)
 
+    mask                = mask_brg(year, filenum) # --- mask interval
+    x_data              = PA # ------------------------ radians
+    y_data              = store_projectedP # ---------- mas
+    y_data_err          = store_projectedP_err # ------ mas
+
+    # --- baseline colors and names should match those of the remaining baselines
+    set_baseline_labels = np.array(
+        [baseline_name(year, baseline) for baseline in range(6)],
+        dtype=object
+    )
+    set_baseline_colors = np.array(
+        [baseline_colors(baseline) for baseline in range(6)],
+        dtype=object
+    )
+
+    # --- fix issue with np.nan in data set
+    nan_mask   = np.isfinite(x_data) & np.isfinite(y_data)
+    x_data     = x_data[nan_mask]
+    y_data     = y_data[nan_mask]
+    y_data_err = y_data_err[nan_mask]
+    set_baseline_labels = set_baseline_labels[nan_mask]
+    set_baseline_colors = set_baseline_colors[nan_mask]
+
+    # --- initial guess and bounds
+    initial_guess = [3, np.deg2rad(50)]
+    bounds = (
+        [0.0, -2*np.pi], # -------- lower [p, phi]
+        [8.0, 2*np.pi] # --- upper [p, phi]
+    )
+
+    # --- fit
+    popt, pcov = curve_fit(
+        cosine,
+        x_data,
+        y_data,
+        sigma=y_data_err,
+        absolute_sigma=False,
+        p0=initial_guess,
+        bounds=bounds,
+        maxfev=50000
+     )
+
+    # --- fitted values
+    p_fitted, phi_fitted = popt
+
+    # --- error on fitted values
+    perr = np.sqrt(np.diag(pcov))
+    p_err, phi_err = perr
+
+    # --- increase resolution on fitted cosine function
+    x_highres = np.linspace(-2*np.pi, 2*np.pi, 100)
+    y_highres = cosine(x_highres, p_fitted, phi_fitted)
+
+    # --- Plot the fitted function and projected data
     if plot:
 
-        plt.figure(figsize=(6.3, 3.4))
-        plt.xlabel("Position Angle [deg]")
-        plt.ylabel("Proj. pure line pc. shift [mas]")
-        plt.title(f"{year} File {filenum}")
+        #plt.figure(figsize=(6.3, 3.4))
+        fig, ax = plt.subplots(figsize=(6.3,3.4))
 
-        plt.errorbar(
-            np.rad2deg(PA),
-            store_projectedP,
-            yerr=store_projectedP_err,
-            fmt="s"
+        ax.set_xlabel("Position Angle [deg]")
+        ax.set_ylabel("Proj. pure line pc. shift [mas]")
+        ax.set_title(f"{year} File {filenum}")
+
+
+        if IncludePhi_theo:
+
+            # --- fit
+            popt, pcov = curve_fit(
+                cosine,
+                PA,
+                store_projectedPtheo,
+                p0=initial_guess,
+                bounds=bounds,
+                maxfev=50000
+             )
+
+            # --- fitted values
+            p_theo_fitted, phi_theo_fitted = popt
+
+            # --- increase resolution on fitted cosine function
+            x_highres      = np.linspace(-2*np.pi, 2*np.pi, 100)
+            y_theo_highres = cosine(x_highres, p_theo_fitted, phi_theo_fitted)
+
+            print(f'p_theo = {p_theo_fitted:.3f} ... phi_theo {np.rad2deg(phi_theo_fitted):.3f}')
+
+            ax.plot(
+                np.rad2deg(x_highres),
+                y_theo_highres,
+                c='red',
+                ls="--",
+                alpha=0.25,
+                zorder=-1
+            )
+
+            ax.errorbar(
+                np.rad2deg(PA),
+                store_projectedPtheo,
+                fmt="o",
+                c="red",
+                alpha=0.4
+            )
+
+            ax.errorbar(
+                np.rad2deg(PA) + 180,
+                -store_projectedPtheo,
+                fmt="o",
+                c="red",
+                alpha=0.4
+            )
+
+
+
+        # --- stupid python loop to properly color the data
+        for i in range(len(set_baseline_colors)):
+            ax.errorbar(
+                np.rad2deg(x_data[i]),#np.rad2deg(PA)[i],
+                y_data[i],#store_projectedP[i],
+                yerr=y_data_err[i],#store_projectedP_err[i],
+                fmt="s",
+                label=set_baseline_labels[i],
+                markerfacecolor=set_baseline_colors[i],
+                markeredgecolor="black",#set_baseline_colors[i],
+                ecolor=set_baseline_colors[i],
+                capsize=2
+            )
+
+            ax.errorbar(
+                np.rad2deg(x_data[i]) + 180,#np.rad2deg(PA)[i] + 180,
+                -y_data[i],#-store_projectedP[i],
+                yerr=y_data_err[i],#store_projectedP_err[i],
+                fmt="s",
+                markerfacecolor=set_baseline_colors[i],
+                markeredgecolor="black",#set_baseline_colors[i],
+                ecolor=set_baseline_colors[i],
+                capsize=2
+            )
+
+        plt.legend()
+
+        if doFit:
+
+            ax.set_ylim(-6.5, 5)
+            param_text = (
+                rf"$p = {p_fitted:.2f} \pm {p_err:.2f}\,\mathrm{{mas}}$" "\n"
+                rf"$\varphi = {np.rad2deg(phi_fitted):.1f} \pm {np.rad2deg(phi_err):.1f}\,^\circ$"
+            )
+
+            ax.text(
+                0.02, 0.98, param_text,
+                transform=ax.transAxes,
+                ha="left", va="top",
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.8, edgecolor="black"),
+            )
+
+            ax.set_title(rf"Pure-line photocenter shift vs. position angle | ({year}, File {filenum})")
+
+            ax.plot(
+                np.rad2deg(x_highres),
+                y_highres,
+                c='blue',
+                lw=1.2
+            )
+
+            ax.legend(ncol=2, loc="lower left")
+
+        # --- actually plot the pure line
+        # ---photocentershift with respect to the orbit
+
+
+        px = p_fitted * np.sin(phi_fitted)
+        py = p_fitted * np.cos(phi_fitted)
+
+        px_err = np.sqrt(
+            (np.sin(phi_fitted))**2 * p_err**2 +
+            (p_fitted * np.cos(phi_fitted))**2 * phi_err**2
         )
 
-        plt.errorbar(
-            np.rad2deg(PA) + 180,
-            -store_projectedP,
-            yerr=store_projectedP_err,
-            fmt="s"
+        py_err = np.sqrt(
+            (np.cos(phi_fitted))**2 * p_err**2 +
+            (p_fitted*np.sin(phi_fitted))**2 * phi_err**2
         )
 
+        # --- return PC values
+        if returnPC:
+            plt.close()
+            return px, px_err, py, py_err
 
+            ax.errorbar(
+                px,
+                py,
+                xerr=px_err,
+                yerr=py_err,
+                capsize=2
+            )
+
+        # doesnt work
+        if plotPC:
+            return
+
+            #fig, ax = plt.subplots(figsize=(6.3,3.4))
+
+            #ax.set_xlabel("Position Angle [deg]")
+            #ax.set_ylabel("Proj. pure line pc. shift [mas]")
+            #ax.set_title(f"{year} File {filenum}")
+
+            #ax.errorbar(
+                #px,
+                #py,
+                #xerr=px_err,
+                #yerr=py_err,
+                #fmt="s",
+                #capsize=2
+            #)
 
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓

@@ -1,2 +1,4 @@
 All_Epochs/
 *.fits
+__pycache__/
+*.pyc

@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget
 from visibility_tab import VisibilityTab
 from normalized_flux_tab import NormalizedFluxTab
 from differential_phase_tab import DifferentialPhaseTab
+from photocenter_shift_tab import PhotocenterShiftTab
 from style_sheet import apply_style
 
 
@@ -31,6 +32,8 @@ class MainWindow(QMainWindow):
         self.normflux_tab = NormalizedFluxTab()
         self.tabs.addTab(self.normflux_tab, "Norm. Flux")
 
+        self.photocenter_tab = PhotocenterShiftTab()
+        self.tabs.addTab(self.photocenter_tab, "Photocenter Shift")
 
 def main():
     app = QApplication(sys.argv)
