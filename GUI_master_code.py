@@ -211,45 +211,49 @@ plt.rcParams.update({
 
 baseline_cache = {}  # (year, filenum) -> np.ndarray of labels
 
-def _compute_baseline_labels(year, filenum):
-    hdul = file_cache[year][filenum]
-    arrays = {
-        h.header['ARRNAME']: h.data
-        for h in hdul
-        if h.header.get('EXTNAME') == 'OI_ARRAY'
-    }
+#def _compute_baseline_labels(year, filenum):
+#    hdul = file_cache[year][filenum]
+#    arrays = {
+#        h.header['ARRNAME']: h.data
+#        for h in hdul
+#        if h.header.get('EXTNAME') == 'OI_ARRAY'
+#    }
 
-    all_baselines = []
+#    all_baselines = []
 
-    for h in hdul:
-        if h.header.get('EXTNAME') not in ('OI_VIS', 'OI_VIS2'):
-            continue
+#    for h in hdul:
+#        if h.header.get('EXTNAME') not in ('OI_VIS', 'OI_VIS2'):
+#            continue
 
-        arrname   = h.header['ARRNAME']
-        arr       = arrays[arrname]
-        sta_names = arr['STA_NAME']
-        sta_ids   = arr['STA_INDEX']
-        sta_pairs = h.data['STA_INDEX']
+ #       arrname   = h.header['ARRNAME']
+ #       arr       = arrays[arrname]
+ #       sta_names = arr['STA_NAME']
+ #       sta_ids   = arr['STA_INDEX']
+ #       sta_pairs = h.data['STA_INDEX']
 
-        id_to_name = dict(zip(sta_ids, sta_names))
-        bl = np.array([f"{id_to_name[i]}-{id_to_name[j]}" for (i, j) in sta_pairs])
-        all_baselines.append(bl)
+  #      id_to_name = dict(zip(sta_ids, sta_names))
+  #      bl = np.array([f"{id_to_name[i]}-{id_to_name[j]}" for (i, j) in sta_pairs])
+  #      all_baselines.append(bl)
 
-    unique_baselines = np.unique(np.concatenate(all_baselines))
-    return unique_baselines[::-1]
+#    unique_baselines = np.unique(np.concatenate(all_baselines))
+#    return unique_baselines[::-1]
 
 
 def baseline_name(year, baseline):
-
-    # baseline_name(year, filenum, baseline) is also possible,
-    # but since the first file of each epoch has the same
-    # configuration as all other files we can simplify with filenum = 0
-    filenum = 0
-    key = (year, filenum)
-    if key not in baseline_cache:
-        baseline_cache[key] = _compute_baseline_labels(year, filenum)
-    labels = baseline_cache[key]
-    return labels[baseline]
+    if year == "2018_red":
+        return ['J3-J2', 'J3-G1', 'J3-A0', 'J2-G1', 'J2-A0', 'G1-A0'][baseline]
+    elif year == "2019_red":
+        return ['J3-D0', 'J3-G2', 'J3-K0', 'D0-G2', 'D0-K0', 'G2-K0'][baseline]
+    elif year == "2020_red":
+        return ['J3-D0', 'J3-G2', 'J3-K0', 'D0-G2', 'D0-K0', 'G2-K0'][baseline]
+    elif year == "2021_red":
+        return ['J3-J2', 'J3-G1', 'J3-A0', 'J2-G1', 'J2-A0', 'G1-A0'][baseline]
+    elif year == "2022a_red":
+        return['J3-D0', 'J3-G2', 'J3-K0', 'D0-G2', 'D0-K0', 'G2-K0'][baseline]
+    elif year == "2022b_red":
+        return ['J3-J2', 'J3-G1', 'J3-A0', 'J2-G1', 'J2-A0', 'G1-A0'][baseline]
+    elif year == "2023_red":
+        return ["K0-J2", "K0-G1", "K0-A0", "J2-G1", "J2-A0", "G1-A0"][baseline]
 
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -654,8 +658,8 @@ def NormFlux(
 
     # --- if PhotosphericCorr is False then default alphas (1,1)
     else:
-        alpha1 = WAVE(year, filenum)/WAVE(year, filenum)
-        alpha2 = WAVE(year, filenum)/WAVE(year, filenum)
+        alpha1 = np.ones_like(WAVE(year, filenum))
+        alpha2 = np.ones_like(WAVE(year, filenum))
         beta1  = 0
         beta2  = 0
 
@@ -761,14 +765,17 @@ def VISPHITOT(year, filenum, baseline):
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 def DATA_CONT(year, filenum, baseline, dataType):
 
-    # --- Data extraction ---
+    # --- Data extraction
     WL          = WAVE(year, filenum)
+    
     if dataType == "VISAMP":
         DATA    = VISAMP(year, filenum, baseline)
-        DATAERR = 0.02*VISAMP(year, filenum, baseline)
+        DATAERR = 0.02*DATA
+
     elif dataType == "VISPHI":
-        DATA = VISPHI(year, filenum, baseline)
-        DATAERR = np.array([1 for i in range(len(VISPHI(year, filenum, baseline)))])
+        DATA    = VISPHI(year, filenum, baseline)
+        DATAERR = np.ones_like(DATA) 
+
     else:
         return print("ERROR: Only dataType = \"VISAMP\" or \"VISPHI\" supported")
 
@@ -790,14 +797,16 @@ def DATA_CONT(year, filenum, baseline, dataType):
     w = 1.0 / np.clip(DATAERR[mask], 1e-12, np.inf)
 
     # coefficients + covariance
-    (a, b), cov = np.polyfit(x, y, 1, w=w, cov=True)
-    sa  = np.sqrt(cov[0, 0])
-    sb  = np.sqrt(cov[1, 1])
-    sab = cov[0, 1]
+    #(a, b), cov = np.polyfit(x, y, 1, w=w, cov=True)
+    #sa  = np.sqrt(cov[0, 0])
+    #sb  = np.sqrt(cov[1, 1])
+    #sab = cov[0, 1]
+
+    # coefficients
+    a, b = np.polyfit(x, y, 1, w=w)
 
     # --- Define the fitted cont.
-    xline = WAVE(year, filenum)
-    cont_model = a * xline + b
+    cont_model = a * WL + b
 
     # --- residuals for future implementation
     yhat = a * x + b
@@ -805,7 +814,6 @@ def DATA_CONT(year, filenum, baseline, dataType):
     residuals = (y - yhat) / sigma
 
     return cont_model
-
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃            Differential phase continuum            ┃ ✅
@@ -967,9 +975,9 @@ def VISLINE(
     F_LC     = NormFlux(year=year, filenum=filenum, returnFLC=True, showHelp=False) # ... F_LC_prime
     VTOT     = VISAMP(year, filenum, baseline) # ........................................ V_tot^Line
     VCONT    = VISAMPCONT(year, filenum, baseline) # .................................... V_tot^cont
-    PHITOT   = np.deg2rad(VISPHITOT(year, filenum, baseline)) # ......................... PHI_TOT
     phitot   = np.deg2rad(VISPHI(year, filenum, baseline)) # ............................ phi_tot
     phicont  = np.deg2rad(DATA_CONT(year, filenum, baseline, dataType="VISPHI")) # ...... phi_cont
+    PHITOT   = phitot - phicont # ....................................................... PHI_TOT
     U        = Extract(year, filenum, dataType="UCOORD")[baseline] # .................... U
     V        = Extract(year, filenum, dataType="VCOORD")[baseline] # .................... V
     DeltaX   = x_astrometrics[year_num[year]] * mas2rad # ............................... DeltaY
@@ -998,7 +1006,7 @@ def VISLINE(
     F_LC_ERR   = 0
     VCONT_ERR  = 0
     VTOT_ERR   = 0.01 * VTOT
-    PHITOT_ERR = np.deg2rad(VISPHITOT(year, filenum, baseline)/VISPHITOT(year, filenum, baseline))
+    PHITOT_ERR = np.deg2rad(np.ones_like(LAM))
 
     term0 = 1/((F_LC - 1)**2 * VIS_LINE_PA)
     term1 = VCONT_ERR * (VCONT - F_LC * VTOT * np.cos(PHITOT))
@@ -1194,9 +1202,10 @@ def PHILINE(
     F_LC     = NormFlux(year=year, filenum=filenum, returnFLC=True) # ................ F_LC_prime
     VTOT     = VISAMP(year, filenum, baseline) # ..................................... V_tot^Line
     VCONT    = VISAMPCONT(year, filenum, baseline) # ................................. V_tot^cont
-    PHITOT   = np.deg2rad(VISPHITOT(year, filenum, baseline)) # ...................... PHI_TOT
+    
     phitot   = np.deg2rad(VISPHI(year, filenum, baseline)) # ......................... phi_tot
     phicont  = np.deg2rad(DATA_CONT(year, filenum, baseline, dataType="VISPHI")) # ... phi_cont
+    PHITOT   = phitot - phicont # .................................................... PHI_TOT
     U        = Extract(year, filenum, dataType="UCOORD")[baseline] # ................. U
     V        = Extract(year, filenum, dataType="VCOORD")[baseline] # ................. V
     DeltaX   = x_astrometrics[year_num[year]] * mas2rad # ............................ DeltaY
@@ -1232,8 +1241,8 @@ def PHILINE(
     )
 
     # --- compute PHI_LINE Error
-    phi_tot_err = 0.0174533 # -------------------------------- 1 degree error in radian
-    vis_tot_err = 0.01 * VISAMP(year, filenum, baseline) # --- 2% error on VisAmp
+    phi_tot_err = np.deg2rad(1) # ---------------------------- 1 degree error in radian
+    vis_tot_err = 0.01 * VTOT # ------------------------------ 1% error on VisAmp
     vline_err   = VISLINE(
                     year=year,
                     filenum=filenum,
