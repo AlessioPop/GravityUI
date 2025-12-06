@@ -26,9 +26,10 @@ class UVCoverageTab(QWidget):
 
         # Standard baseline colors matching other tabs
         self.baseline_color_list = [
-            "#5ac4ee", "#63e3bf", "#b95cf4",
-            "#8cf55a", "#f559b7", "#f7b54c"
+        "cyan", "magenta", "yellow",
+        "#8cf55a", "blue", "red"
         ]
+
 
         self._create_widgets()
         self._create_layouts()

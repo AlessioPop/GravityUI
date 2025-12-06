@@ -262,19 +262,23 @@ class NormalizedFluxTab(QWidget):
             return
 
         # execute fit without plotting or Rich console spam
-        try:
-            res = ms.FitGaussian(
-                year=year,
-                filenum=filenum,
+        #try:
+            # --- alpha parameters from UI (used below) ------------------------
+        alpha1_val, alpha2_val, a1_ws, a2_ws = self._get_alpha_params_from_ui()
+        res = ms.FitGaussian(
+                year,
+                filenum,
                 showHelp=False,
                 printFitParameters=False,
-                plotLine=None,
-                do_plot=False,
-                return_dict=True,
+                plotLine=False,
+                plot=False,
+                returnFittedParam=True,
+                a1_ws=a1_ws,
+                a2_ws=a2_ws
             )
-        except Exception as e:
-            self.fit_output.setPlainText(f"Fit failed:\n{repr(e)}")
-            return
+        #except Exception as e:
+        #    self.fit_output.setPlainText(f"Fit failed:\n{repr(e)}")
+        #    return
 
         # build a compact, terminal-like report
         lines = []
@@ -390,18 +394,7 @@ class NormalizedFluxTab(QWidget):
         flux_raw = ms.NormFlux(
             year=year,
             filenum=filenum,
-            PhotosphericCorr=False,
-            alpha1=None,
-            alpha2=None,
-            alpha1_whichSpectrum=None,
-            alpha2_whichSpectrum=None,
-            returnFLC=False,
-            returnFLCcorr=False,
-            returnPhotoCorrectionFlux=False,
-            returnRAWFLUX=True,
-            returnTellurics=False,
-            returnAbsorbtion1=False,
-            returnAbsorbtion2=False
+            returnRAWFLUX=True
         )
 
         self.ax.clear()
@@ -453,23 +446,27 @@ class NormalizedFluxTab(QWidget):
         # --- alpha parameters from UI (used below) ------------------------
         alpha1_val, alpha2_val, a1_ws, a2_ws = self._get_alpha_params_from_ui()
 
+
+
         # --- optional photo-corrected flux --------------------------------
         if self.chk_photo_corr.isChecked():
             flux_photo = ms.NormFlux(
                 year=year,
                 filenum=filenum,
-                PhotosphericCorr=True,
-                alpha1_whichSpectrum=a1_ws,
-                alpha2_whichSpectrum=a2_ws,
-                alpha1=alpha1_val,
-                alpha2=alpha2_val,
+                #alpha1_whichSpectrum=a1_ws,
+                #alpha2_whichSpectrum=a2_ws,
+                alpha1=a1_ws,
+                alpha2=a2_ws,
+                beta1=None,
+                beta2=None,
                 returnFLC=False,
                 returnFLCcorr=False,
                 returnPhotoCorrectionFlux=True,
                 returnRAWFLUX=False,
                 returnTellurics=False,
-                returnAbsorbtion1=False,
-                returnAbsorbtion2=False
+                #PhotosphericCorr=True
+                #returnAbsorbtion1=False,
+                #returnAbsorbtion2=False
             )
 
             label_str = "Photo-corr ("
@@ -498,18 +495,7 @@ class NormalizedFluxTab(QWidget):
             tell = ms.NormFlux(
                 year=year,
                 filenum=filenum,
-                PhotosphericCorr=False,
-                alpha1=None,
-                alpha2=None,
-                alpha1_whichSpectrum=None,
-                alpha2_whichSpectrum=None,
                 returnTellurics=True,
-                returnRAWFLUX=False,
-                returnFLC=False,
-                returnFLCcorr=False,
-                returnPhotoCorrectionFlux=False,
-                returnAbsorbtion1=False,
-                returnAbsorbtion2=False
             )
             self.ax.plot(
                 wl, tell,
@@ -525,18 +511,9 @@ class NormalizedFluxTab(QWidget):
             abs1 = ms.NormFlux(
                 year=year,
                 filenum=filenum,
-                PhotosphericCorr=True,
-                alpha1_whichSpectrum=a1_ws,
-                alpha2_whichSpectrum=a2_ws,
-                alpha1=alpha1_val,
-                alpha2=alpha2_val,
-                returnFLC=False,
-                returnFLCcorr=False,
-                returnPhotoCorrectionFlux=False,
-                returnRAWFLUX=False,
-                returnTellurics=False,
-                returnAbsorbtion1=True,
-                returnAbsorbtion2=False
+                alpha1=a1_ws,
+                alpha2=a2_ws,
+                returnAlpha1=True
             )
             self.ax.plot(
                 wave_pollux, abs1,
@@ -550,18 +527,9 @@ class NormalizedFluxTab(QWidget):
             abs2 = ms.NormFlux(
                 year=year,
                 filenum=filenum,
-                PhotosphericCorr=True,
-                alpha1_whichSpectrum=a1_ws,
-                alpha2_whichSpectrum=a2_ws,
-                alpha1=alpha1_val,
-                alpha2=alpha2_val,
-                returnFLC=False,
-                returnFLCcorr=False,
-                returnPhotoCorrectionFlux=False,
-                returnRAWFLUX=False,
-                returnTellurics=False,
-                returnAbsorbtion1=False,
-                returnAbsorbtion2=True
+                alpha1=a1_ws,
+                alpha2=a2_ws,
+                returnAlpha2=True
             )
             self.ax.plot(
                 wave_pollux, abs2,
